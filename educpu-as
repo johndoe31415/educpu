@@ -32,7 +32,7 @@ class Opcodes(enum.IntEnum):
 	ldmem = 0x2
 	strmem = 0x3
 	jmp = 0x4
-	jpeq = 0x5
+	jmpeq = 0x5
 	jmpneq = 0x6
 	jmplt = 0x7
 	addmem = 0x8
@@ -44,7 +44,7 @@ class Opcodes(enum.IntEnum):
 	terminate = 0xe
 
 class Assembler():
-	_insn_re = re.compile(r"\s*(?P<opcode>[A-Za-z]+)(\s+((?P<param_hex>-?0x[0-9a-fA-F]+)|(?P<param_int>-?[0-9]+)|('(?P<param_char>.)')|(@(?P<param_ref>[_a-zA-Z0-9]+))|((?P<param_label>[a-zA-Z0-9]+))))?")
+	_insn_re = re.compile(r"\s*(?P<opcode>[A-Za-z]+)(\s+((?P<param_hex>-?0x[0-9a-fA-F]+)|(?P<param_int>-?[0-9]+)|('(?P<param_char>.)')|((?P<param_label>[_@a-zA-Z0-9]+))))?")
 	_asmcmd_re = re.compile(r"\s*\.(?P<asmcmd>[A-Za-z]+)(\s+(?P<args>.*))?")
 	_label_re = re.compile(r"\s*(?P<label>[_A-Za-z]+):")
 	_args_re = re.compile(r"\s+")
@@ -52,7 +52,6 @@ class Assembler():
 	def __init__(self, args):
 		self._args = args
 		self._loc = 0
-		self._defs = { }
 		self._labels = { }
 		self._memory = None
 
@@ -76,8 +75,6 @@ class Assembler():
 			operand = int(groupdict["param_int"])
 		elif groupdict["param_hex"] is not None:
 			operand = int(groupdict["param_hex"], 16)
-		elif groupdict["param_ref"] is not None:
-			operand = self._defs[groupdict["param_ref"]]
 		elif groupdict["param_char"] is not None:
 			operand = ord(groupdict["param_char"])
 		elif groupdict["param_label"] is not None:
@@ -108,10 +105,10 @@ class Assembler():
 			args = None
 		match groupdict["asmcmd"]:
 			case "org":
-				pass
+				self._loc = self._parse_int(args[0])
 			case "def":
 				(name, value) = args
-				self._defs[name] = self._parse_int(value)
+				self._labels[name] = self._parse_int(value)
 			case _:
 				raise Exception(f"Unknown asmcmd: {groupdict['asmcmd']}")
 
