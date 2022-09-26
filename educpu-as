@@ -1,0 +1,166 @@
+#!/usr/bin/python3
+#	educpu - Custom CPU hardware implementation for educational purposes
+#	Copyright (C) 2022-2022 Johannes Bauer
+#
+#	This file is part of educpu.
+#
+#	educpu is free software; you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation; this program is ONLY licensed under
+#	version 3 of the License, later versions are explicitly excluded.
+#
+#	educpu is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with educpu; if not, write to the Free Software
+#	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+#	Johannes Bauer <JohannesBauer@gmx.de>
+
+import sys
+import enum
+import os
+import re
+from FriendlyArgumentParser import FriendlyArgumentParser
+
+class Opcodes(enum.IntEnum):
+	nop = 0x0
+	ldimm = 0x1
+	ldmem = 0x2
+	strmem = 0x3
+	jmp = 0x4
+	jpeq = 0x5
+	jmpneq = 0x6
+	jmplt = 0x7
+	addmem = 0x8
+	addcmem = 0x9
+	submem = 0xa
+	subbmem = 0xb
+	com = 0xc
+	write = 0xd
+	terminate = 0xe
+
+class Assembler():
+	_insn_re = re.compile(r"\s*(?P<opcode>[A-Za-z]+)(\s+((?P<param_hex>-?0x[0-9a-fA-F]+)|(?P<param_int>-?[0-9]+)|('(?P<param_char>.)')|(@(?P<param_ref>[_a-zA-Z0-9]+))|((?P<param_label>[a-zA-Z0-9]+))))?")
+	_asmcmd_re = re.compile(r"\s*\.(?P<asmcmd>[A-Za-z]+)(\s+(?P<args>.*))?")
+	_label_re = re.compile(r"\s*(?P<label>[_A-Za-z]+):")
+	_args_re = re.compile(r"\s+")
+
+	def __init__(self, args):
+		self._args = args
+		self._loc = 0
+		self._defs = { }
+		self._labels = { }
+		self._memory = None
+
+	def _emit(self, opcode: Opcodes, operand: int = 0):
+		if self._memory is not None:
+			required_padding = (self._loc + 3) - len(self._memory)
+			if required_padding > 0:
+				# Append data
+				self._memory += bytes(required_padding)
+			values = [ int(opcode), (operand >> 8) & 0xff, (operand >> 0) & 0xff ]
+			print(f"{self._loc:4x}: {opcode.name:10s} {operand:4x}  {' '.join('%02x' % v for v in values)}")
+
+			self._memory[self._loc + 0] = values[0]
+			self._memory[self._loc + 1] = values[1]
+			self._memory[self._loc + 2] = values[2]
+		self._loc += 3
+
+	def _emit_insn(self, groupdict):
+		opcode = getattr(Opcodes, groupdict["opcode"])
+		if groupdict["param_int"] is not None:
+			operand = int(groupdict["param_int"])
+		elif groupdict["param_hex"] is not None:
+			operand = int(groupdict["param_hex"], 16)
+		elif groupdict["param_ref"] is not None:
+			operand = self._defs[groupdict["param_ref"]]
+		elif groupdict["param_char"] is not None:
+			operand = ord(groupdict["param_char"])
+		elif groupdict["param_label"] is not None:
+			if self._memory is None:
+				# First pass
+				operand = 0
+			else:
+				operand = self._labels[groupdict["param_label"]]
+		else:
+			operand = 0
+		operand &= 0xffff
+		self._emit(opcode, operand)
+
+	@staticmethod
+	def _parse_int(text):
+		if "0x" in text:
+			return int(text, 16)
+		else:
+			return int(text)
+
+	def _emit_label(self, groupdict):
+		self._labels[groupdict["label"]] = self._loc
+
+	def _emit_asmcmd(self, groupdict):
+		if groupdict["args"] is not None:
+			args = self._args_re.split(groupdict["args"])
+		else:
+			args = None
+		match groupdict["asmcmd"]:
+			case "org":
+				pass
+			case "def":
+				(name, value) = args
+				self._defs[name] = self._parse_int(value)
+			case _:
+				raise Exception(f"Unknown asmcmd: {groupdict['asmcmd']}")
+
+	def _run(self):
+		with open(self._args.source) as f:
+			for (lineno, line) in enumerate(f, 1):
+				line = line.rstrip("\r\n\t ")
+				if line.startswith("#"):
+					continue
+				if line == "":
+					continue
+				rematch = self._insn_re.fullmatch(line)
+				if rematch is not None:
+					rematch = rematch.groupdict()
+					self._emit_insn(rematch)
+					continue
+
+				rematch = self._asmcmd_re.fullmatch(line)
+				if rematch is not None:
+					rematch = rematch.groupdict()
+					self._emit_asmcmd(rematch)
+					continue
+
+				rematch = self._label_re.fullmatch(line)
+				if rematch is not None:
+					rematch = rematch.groupdict()
+					self._emit_label(rematch)
+					continue
+
+				raise Exception(f"Unable to parse line {lineno}: \"{line}\"")
+
+	def run(self):
+		self._run()
+		self._loc = 0
+		self._memory = bytearray()
+		self._run()
+		if self._args.output is not None:
+			outfile = self._args.output
+		else:
+			outfile = os.path.splitext(self._args.source)[0] + ".bin"
+		with open(outfile, "wb") as f:
+			f.write(self._memory)
+
+
+parser = FriendlyArgumentParser(description = "EduCPU assembler.")
+parser.add_argument("-o", "--output", metavar = "filename", help = "Write this output file. By default is determined by the source code filename.")
+parser.add_argument("-v", "--verbose", action = "count", default = 0, help = "Increases verbosity. Can be specified multiple times to increase.")
+parser.add_argument("source", help = "Source code file to assemble.")
+args = parser.parse_args(sys.argv[1:])
+
+asm = Assembler(args)
+asm.run()
