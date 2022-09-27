@@ -55,19 +55,21 @@ class Assembler():
 		self._labels = { }
 		self._memory = None
 
-	def _emit(self, opcode: Opcodes, operand: int = 0):
+	def _emit_data(self, data: bytes):
 		if self._memory is not None:
-			required_padding = (self._loc + 3) - len(self._memory)
+			required_padding = (self._loc + len(data)) - len(self._memory)
 			if required_padding > 0:
 				# Append data
 				self._memory += bytes(required_padding)
-			values = [ int(opcode), (operand >> 8) & 0xff, (operand >> 0) & 0xff ]
-			print(f"{self._loc:4x}: {opcode.name:10s} {operand:4x}  {' '.join('%02x' % v for v in values)}")
+			for (index, value) in enumerate(data):
+				self._memory[self._loc + index] = value
+		self._loc += len(data)
 
-			self._memory[self._loc + 0] = values[0]
-			self._memory[self._loc + 1] = values[1]
-			self._memory[self._loc + 2] = values[2]
-		self._loc += 3
+	def _emit(self, opcode: Opcodes, operand: int = 0):
+		machine_code = bytes([ int(opcode), (operand >> 8) & 0xff, (operand >> 0) & 0xff ])
+		if self._memory is not None:
+			print(f"{self._loc:4x}: {opcode.name:10s} {operand:4x}  {' '.join('%02x' % v for v in machine_code)}")
+		self._emit_data(machine_code)
 
 	def _emit_insn(self, groupdict):
 		opcode = getattr(Opcodes, groupdict["opcode"])
@@ -109,6 +111,10 @@ class Assembler():
 			case "def":
 				(name, value) = args
 				self._labels[name] = self._parse_int(value)
+			case "string":
+				stringval = " ".join(args)
+				byte_data = stringval.encode("ascii") + bytes(1)
+				self._emit_data(byte_data)
 			case _:
 				raise Exception(f"Unknown asmcmd: {groupdict['asmcmd']}")
 
