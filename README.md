@@ -18,9 +18,9 @@ These are the supported opcodes:
 | 06     | JMPNEQ    | Jump if not equal                                    | 16-bit memory address                  |
 | 07     | JMPLT     | Jump if less than                                    | 16-bit memory address                  |
 | 08     | ADDMEM    | Arithmetic addition: ACC += *addr                    | 16-bit memory address                  |
-| 09     | SUBMEM    | Arithmetic addition with carry: ACC += *addr + C     | 16-bit memory address                  |
+| 09     | ADDCMEM   | Arithmetic addition with carry: ACC += *addr + C     | 16-bit memory address                  |
 | 0a     | SUBMEM    | Arithmetic subtraction: ACC -= *addr                 | 16-bit memory address                  |
-| 0b     | SUBBMEM   | Arithmetic subtraction with borrow: ACC -= *addr - C | 16-bit memory address                  |
+| 0b     | SUBCMEM   | Arithmetic subtraction with borrow: ACC -= *addr - C | 16-bit memory address                  |
 | 0c     | COM       | Complement: ACC = ~ACC                               | ignored                                |
 | 0d     | WRITE     | Write ACC to terminal                                | ignored                                |
 | 0e     | TERMINATE | Halt CPU                                             | ignored                                |
@@ -57,7 +57,7 @@ The main memory is fairly similar:
     (`!MWRITE` = read, `MWRITE` = write)
   - On a positive edge on `MCLK` if `!MWRITE`, data from `ADDR` is read into
     `DATA`.  On a positive edge on `MCLK` if `MWRITE`, `DATA` is stored at
-    address `ADDR`. 
+    address `ADDR`.
 
 ## Theory of operation
 Each instruction is executed in 23 clock cycles. If particular stages are not

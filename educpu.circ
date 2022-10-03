@@ -2336,7 +2336,7 @@
     <comp lib="0" loc="(980,1660)" name="Pin">
       <a name="appearance" val="NewPins"/>
       <a name="facing" val="west"/>
-      <a name="label" val="SUBBMEM"/>
+      <a name="label" val="SUBCMEM"/>
       <a name="output" val="true"/>
     </comp>
     <comp lib="0" loc="(980,1740)" name="Pin">
@@ -2485,7 +2485,7 @@
       <rect height="3" stroke="none" width="10" x="50" y="119"/>
       <text dominant-baseline="alphabetic" fill="#404040" font-family="Courier 10 Pitch" font-size="12" text-anchor="start" x="65" y="124">SUB</text>
       <rect height="3" stroke="none" width="10" x="50" y="139"/>
-      <text dominant-baseline="alphabetic" fill="#404040" font-family="Courier 10 Pitch" font-size="12" text-anchor="start" x="65" y="144">SUBB</text>
+      <text dominant-baseline="alphabetic" fill="#404040" font-family="Courier 10 Pitch" font-size="12" text-anchor="start" x="65" y="144">SUBC</text>
       <rect height="3" stroke="none" width="10" x="50" y="159"/>
       <text dominant-baseline="alphabetic" fill="#404040" font-family="Courier 10 Pitch" font-size="12" text-anchor="start" x="65" y="164">COM</text>
       <rect height="4" stroke="none" width="10" x="50" y="178"/>
@@ -2549,7 +2549,7 @@
     </comp>
     <comp lib="0" loc="(200,520)" name="Pin">
       <a name="appearance" val="NewPins"/>
-      <a name="label" val="SUBB"/>
+      <a name="label" val="SUBC"/>
     </comp>
     <comp lib="0" loc="(200,560)" name="Pin">
       <a name="appearance" val="NewPins"/>

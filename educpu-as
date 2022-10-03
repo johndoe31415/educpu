@@ -38,7 +38,7 @@ class Opcodes(enum.IntEnum):
 	addmem = 0x8
 	addcmem = 0x9
 	submem = 0xa
-	subbmem = 0xb
+	subcmem = 0xb
 	com = 0xc
 	write = 0xd
 	terminate = 0xe
